@@ -243,7 +243,7 @@ n, err := h.repo.ByID(ctx, id)
 
 
 ```powershell
-.\test_api.ps1
+.\test_mongodb.ps1
 ```
 
 
