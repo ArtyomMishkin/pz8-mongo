@@ -6,7 +6,7 @@
 
 ## Информация о проекте
 
-REST API на Go с использованием MongoDB для управления заметками. Реализация полного набора CRUD-операций (Create, Read, Update, Delete) с поддержкой фильтрации, пагинации и индексов. Проект демонстрирует работу с документной базой данных и драйвером официального клиента go.mongodb.org/mongo-driver.
+REST API на Go с использованием MongoDB для управления заметками. Реализация полного набора CRUD-операций (Create, Read, Update, Delete)
 
 ## Цели занятия
 
@@ -18,69 +18,17 @@ REST API на Go с использованием MongoDB для управлен
 
 ## Файловая структура проекта
 
-```
-pz8-mongo/
-├── cmd/api/main.go
-├── internal/
-│   ├── db/mongo.go
-│   └── notes/
-│       ├── model.go
-│       ├── repo.go
-│       └── handler.go
-├── docker-compose.yml
-├── .env.example
-├── go.mod
-└── README.md
-```
+![alt text](image.png)
 
 ## ВАЖНОЕ ПРИМЕЧАНИЕ
 
 - **Порт сервера**: 8080
-- **MongoDB**: порт 6379 (стандартный для Redis в предыдущей работе, для MongoDB — 27017)
+- **MongoDB**:  — 27017
 - **База данных**: pz8
 - **Коллекция**: notes
 - **Аутентификация**: root:secret (через authSource=admin)
 
-## Основные компоненты
 
-### 1. Модель данных (Note)
-
-```go
-type Note struct {
-    ID        primitive.ObjectID `bson:"_id,omitempty" json:"id"`
-    Title     string             `bson:"title" json:"title"`
-    Content   string             `bson:"content" json:"content"`
-    CreatedAt time.Time          `bson:"createdAt" json:"createdAt"`
-    UpdatedAt time.Time          `bson:"updatedAt" json:"updatedAt"`
-}
-```
-
-### 2. CRUD-операции
-
-**Create** — POST /api/v1/notes
-```json
-{
-  "title": "First note",
-  "content": "Hello Mongo!"
-}
-```
-
-**Read (List)** — GET /api/v1/notes?limit=5&skip=0&q=search
-- Параметр `q` — поиск по заголовку (регулярное выражение, case-insensitive)
-- `limit` — количество результатов (макс 200, по умолчанию 20)
-- `skip` — пропустить N записей
-
-**Read (By ID)** — GET /api/v1/notes/{id}
-
-**Update** — PATCH /api/v1/notes/{id}
-```json
-{
-  "title": "Updated title",
-  "content": "Updated content"
-}
-```
-
-**Delete** — DELETE /api/v1/notes/{id}
 
 ## Примеры запросов (PowerShell)
 
@@ -98,6 +46,7 @@ $createBody = @{
 $response = Invoke-WebRequest -Uri $apiUrl -Method POST -Headers $headers -Body $createBody
 $noteId = ($response.Content | ConvertFrom-Json).id
 ```
+![alt text](image-1.png)
 
 ### 2. Получение списка заметок
 
@@ -106,12 +55,17 @@ $listUrl = $apiUrl + "?limit=5&skip=0"
 Invoke-WebRequest -Uri $listUrl -Method GET | ForEach-Object { $_.Content | ConvertFrom-Json | ConvertTo-Json }
 ```
 
+![alt text](image-2.png)
+
+
 ### 3. Получение заметки по ID
 
 ```powershell
 $getUrl = $apiUrl + "/" + $noteId
 Invoke-WebRequest -Uri $getUrl -Method GET | ForEach-Object { $_.Content | ConvertFrom-Json | ConvertTo-Json }
 ```
+
+![alt text](image-3.png)
 
 ### 4. Обновление заметки
 
@@ -123,11 +77,15 @@ $updateBody = @{
 Invoke-WebRequest -Uri "$apiUrl/$noteId" -Method PATCH -Headers $headers -Body $updateBody
 ```
 
+![alt text](image-4.png)
+
 ### 5. Удаление заметки
 
 ```powershell
 Invoke-WebRequest -Uri "$apiUrl/$noteId" -Method DELETE
 ```
+
+![alt text](image-5.png)
 
 ## Запуск проекта
 
@@ -139,14 +97,14 @@ docker-compose up -d
 
 ### Запуск API сервера
 
-```bash
+```powershell
 cd pz8-mongo
 go run ./cmd/api
 ```
 
 ### Проверка здоровья сервера
 
-```bash
+```powershell
 curl -s http://localhost:8080/health
 ```
 
@@ -284,48 +242,11 @@ n, err := h.repo.ByID(ctx, id)
 5. Удаляет заметку
 6. Проверяет, что заметка удалена (404)
 
+
 ```powershell
 .\test_api.ps1
 ```
 
-## Дополнительно
-
-### Текстовый поиск (звёздочка)
-
-Добавьте текстовый индекс:
-```go
-col.Indexes().CreateOne(ctx, mongo.IndexModel{
-    Keys: bson.D{{Key: "title", Value: "text"}},
-})
-```
-
-И используйте оператор `$text`:
-```go
-filter := bson.M{"$text": bson.M{"$search": q}}
-```
-
-### TTL-индекс (звёздочка)
-
-Для автоудаления старых заметок добавьте поле `expiresAt` и индекс:
-```go
-col.Indexes().CreateOne(ctx, mongo.IndexModel{
-    Keys: bson.D{{Key: "expiresAt", Value: 1}},
-    Options: options.Index().SetExpireAfterSeconds(0),
-})
-```
-
-### Aggregation Pipeline (звёздочка)
-
-Получите статистику по заметкам:
-```go
-pipeline := mongo.Pipeline{
-    bson.D{{Key: "$group", Value: bson.D{
-        {Key: "_id", Value: nil},
-        {Key: "count", Value: bson.D{{Key: "$sum", Value: 1}}},
-        {Key: "avgLength", Value: bson.D{{Key: "$avg", Value: bson.D{{Key: "$strLenCP", Value: "$content"}}}}},
-    }}},
-}
-```
 
 ## Типовые ошибки
 
